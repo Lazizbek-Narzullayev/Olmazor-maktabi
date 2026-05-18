@@ -33,7 +33,7 @@ import Login from './pages/Login/Login'
 import AdminDashboard from './pages/Admin/AdminDashboard'
 import TeacherDashboard from './pages/Teacher/TeacherDashboard'
 import StudentDashboard from './pages/Student/StudentDashboard'
-import ProtectedRoute from './components/ProtectedRoute'
+import ProtectedRoute from './Components/ProtectedRoute'
 
 const App = () => {
   const location = useLocation()
