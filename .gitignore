@@ -1,0 +1,14 @@
+# Dependency directories
+node_modules/
+node.js/node_modules/
+Olmazor/node_modules/
+
+# Environments
+.env
+.env.local
+node.js/.env
+Olmazor/.env
+
+# IDE / System files
+.vscode/
+.DS_Store
