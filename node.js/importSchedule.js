@@ -10,7 +10,7 @@ const require = createRequire(import.meta.url);
 const xlsx = require('xlsx');
 dotenv.config();
 
-const filePath = 'c:/Users/laziz/Desktop/fotima/mart dars jadvali (2).xls';
+const filePath = 'c:/Users/laziz/Desktop/Olmazor-maktabi/mart dars jadvali (2).xls';
 
 function matchTeacher(excelName, teachers) {
     if (!excelName) return null;
