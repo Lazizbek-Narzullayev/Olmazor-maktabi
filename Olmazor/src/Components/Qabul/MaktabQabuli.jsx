@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { FaLocationDot } from "react-icons/fa6";
 import { NavLink } from 'react-router-dom';
+import { API_URL } from '../../services/api';
 
 const MaktabQabuli = () => {
   const [form, setForm] = useState({ ism: '', familiya: '', telefon: '', sinf: '' });
@@ -13,7 +14,7 @@ const MaktabQabuli = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('http://localhost:4200/applications', {
+      const res = await fetch(`${API_URL}/applications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, type: 'maktab' }),

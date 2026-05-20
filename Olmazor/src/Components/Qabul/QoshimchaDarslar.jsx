@@ -7,6 +7,7 @@ import {
   FaTimes,
   FaCheck,
 } from "react-icons/fa";
+import { API_URL } from '../../services/api';
 
 const QoshimchaDarslar = () => {
   const [subjects, setSubjects] = useState([]);
@@ -25,7 +26,7 @@ const QoshimchaDarslar = () => {
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
-        const res = await fetch('http://localhost:4200/subjects');
+        const res = await fetch(`${API_URL}/subjects`);
         const data = await res.json();
         if (data.status === 'success') {
           setSubjects(data.data.subjects);
@@ -51,7 +52,7 @@ const QoshimchaDarslar = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('http://localhost:4200/applications', {
+      const res = await fetch(`${API_URL}/applications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

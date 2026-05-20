@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { API_URL } from "../../services/api";
 
 const fallbackStudents = [
   {
@@ -193,7 +194,7 @@ const Stu5 = () => {
             <div className="relative z-10 flex items-center gap-4 mb-5">
               {s.img ? (
                 <img
-                  src={s.img.startsWith('http') ? s.img : `${import.meta.env.VITE_API_URL || 'http://localhost:4200'}${s.img}`}
+                  src={s.img.startsWith('http') ? s.img : `${API_URL}${s.img}`}
                   alt={s.name}
                   className="w-16 h-16 rounded-full object-cover border-2 border-white/40"
                 />
