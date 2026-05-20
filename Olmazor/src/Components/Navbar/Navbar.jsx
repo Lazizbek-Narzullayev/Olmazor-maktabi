@@ -149,7 +149,7 @@ const Navbar = () => {
           <NavLink onClick={() => setOpen(false)} to="/sm">O'quvchilar TOP ligi</NavLink>
           <NavLink onClick={() => setOpen(false)} to="/tm">O'qituvchilar TOP ligi</NavLink>
           <NavLink onClick={() => setOpen(false)} to="/shar">Maktab sharoiti</NavLink>
-          <NavLink onClick={() => setOpen(false)} to="/qa">Qabulga yozilish</NavLink>
+          <NavLink onClick={() => setOpen(false)} to="/mq">Qabulga yozilish</NavLink>
         </ul>
 
         {/* If logged in, show dashboard link in sidebar too */}

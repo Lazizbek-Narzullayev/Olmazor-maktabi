@@ -93,7 +93,7 @@ const Hero = () => {
                 Biz bilan tanishing
               </button>
             </NavLink>
-            <NavLink to="/qa">
+            <NavLink to="/mq">
               <button className="bg-white text-blue-900 px-6 py-3 rounded-xl font-semibold hover:bg-gray-100">
                 Ro‘yxatdan o‘tish
               </button>
