@@ -1,4 +1,7 @@
 import { Application } from "./applicationModel.js";
+import { Users } from "../users/userModel.js";
+import { Class } from "../classes/classModel.js";
+import bcrypt from "bcryptjs";
 import TelegramBot from "node-telegram-bot-api";
 import dotenv from "dotenv";
 dotenv.config();
@@ -36,9 +39,41 @@ export const getAllApplications = async (req, res) => {
 
 export const updateApplicationStatus = async (req, res) => {
     try {
+        const { status } = req.body;
+        const application = await Application.findById(req.params.id);
+        
+        if (!application) return res.status(404).json({ status: 'error', message: 'Ariza topilmadi' });
+
+        if (status === 'qabul_qilindi' && application.status !== 'qabul_qilindi') {
+            const sinfName = application.sinf;
+            let targetClass = await Class.findOne({ name: { $regex: new RegExp(`^${sinfName}`, 'i') } });
+            
+            const baseUserName = `${application.ism.toLowerCase()}_${application.familiya.toLowerCase()}`.replace(/[^a-z0-9_]/g, '');
+            let userName = baseUserName;
+            let counter = 1;
+            while (await Users.findOne({ userName })) {
+                userName = `${baseUserName}${counter}`;
+                counter++;
+            }
+
+            const plainPassword = 'password123';
+            const hashedPassword = await bcrypt.hash(plainPassword, 10);
+            
+            await Users.create({
+                name: `${application.ism} ${application.familiya}`,
+                userName: userName,
+                password: hashedPassword,
+                plainPassword: plainPassword,
+                phoneNumber: application.telefon,
+                role: 'student',
+                classId: targetClass ? targetClass._id : null,
+                isFirstLogin: true
+            });
+        }
+
         const updated = await Application.findByIdAndUpdate(
             req.params.id,
-            { status: req.body.status },
+            { status },
             { new: true }
         );
         res.status(200).json({ status: 'success', data: { application: updated } });

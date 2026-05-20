@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 import { connectDB } from "./utils/connectDB.js";
 import { authRouter } from "./auth/authRoute.js";
 import { usersRouter } from "./users/usersRoute.js";
@@ -10,6 +12,9 @@ import { gradesRouter } from "./grades/gradeRoute.js";
 import { scheduleRouter } from "./schedule/scheduleRoute.js";
 import { applicationsRouter } from "./applications/applicationRoute.js";
 import libraryRouter from "./library/libraryRoute.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -27,7 +32,7 @@ app.use('/grades', gradesRouter);
 app.use('/schedule', scheduleRouter);
 app.use('/applications', applicationsRouter);
 app.use('/library', libraryRouter);
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/', (req, res) => {
     res.send('✅ Olmazor Maktab Server ishlayapti!');

@@ -71,22 +71,70 @@ async function startImport() {
             fs.mkdirSync(UPLOADS_DIR, { recursive: true });
         }
 
-        // 1. Extract and map images from worksheet by row number
-        console.log("🔍 Extracting embedded images from spreadsheet...");
-        const imagesMap = {}; // Maps 1-based row number to image media info
-        
-        const worksheetImages = worksheet.getImages();
-        console.log(`📸 Found ${worksheetImages.length} images in the worksheet.`);
+        // 1. Extract and map images from worksheet using Greedy 1-to-1 Matching
+        console.log("🔍 Extracting embedded images from spreadsheet using Greedy Matching...");
+        const worksheetImages = worksheet.getImages().filter(img => img.range.tl.nativeCol === 3);
+        console.log(`📸 Found ${worksheetImages.length} images in column 4.`);
 
-        worksheetImages.forEach((img) => {
+        const teachersForMatching = [];
+        for (let i = 3; i <= worksheet.rowCount; i++) {
+            const row = worksheet.getRow(i);
+            const rawName = row.getCell(6).value;
+            if (rawName && typeof rawName === 'string') {
+                const trimmedName = rawName.trim().replace(/\s+/g, ' ');
+                if (
+                    trimmedName !== "Мактаб раҳбарияti" && 
+                    trimmedName !== "Мактаб раҳбарияти" && 
+                    trimmedName !== "O'qituvchilar" && 
+                    trimmedName !== "Ф.И.Ш" &&
+                    trimmedName.length >= 3
+                ) {
+                    teachersForMatching.push({
+                        excelRow: i,
+                        name: trimmedName
+                    });
+                }
+            }
+        }
+
+        const imagesForMatching = worksheetImages.map((img, idx) => {
+            const tl = img.range.tl;
+            const nativeRowOff = tl.nativeRowOff || 0;
+            const preciseY = tl.nativeRow + nativeRowOff / 1000000000;
             const imgData = workbook.model.media.find(m => m.index === img.imageId);
-            if (imgData) {
-                // nativeRow is 0-indexed, convert to 1-indexed row number
-                const rowNum = img.range.tl.nativeRow + 1;
-                imagesMap[rowNum] = {
-                    buffer: imgData.buffer,
-                    extension: imgData.extension || 'png'
-                };
+            return {
+                id: idx,
+                preciseRow: preciseY + 1,
+                imageId: img.imageId,
+                buffer: imgData ? imgData.buffer : null,
+                extension: imgData ? (imgData.extension || 'png') : 'png'
+            };
+        });
+
+        // Build pairs and sort by distance
+        const pairs = [];
+        teachersForMatching.forEach((t) => {
+            imagesForMatching.forEach((img) => {
+                const distance = Math.abs(img.preciseRow - t.excelRow);
+                pairs.push({ t, img, distance });
+            });
+        });
+        pairs.sort((a, b) => a.distance - b.distance);
+
+        const matchedTeachers = new Set();
+        const matchedImages = new Set();
+        const imagesMap = {}; // Maps Excel row number to matched image info
+
+        pairs.forEach((pair) => {
+            if (!matchedTeachers.has(pair.t.excelRow) && !matchedImages.has(pair.img.id)) {
+                if (pair.distance < 1.5) {
+                    matchedTeachers.add(pair.t.excelRow);
+                    matchedImages.add(pair.img.id);
+                    imagesMap[pair.t.excelRow] = {
+                        buffer: pair.img.buffer,
+                        extension: pair.img.extension
+                    };
+                }
             }
         });
 
@@ -114,14 +162,6 @@ async function startImport() {
                 continue;
             }
 
-            // Check if teacher already exists in the database
-            const existingUser = await Users.findOne({ name: trimmedName, role: 'teacher' });
-            if (existingUser) {
-                console.log(`ℹ️ Row ${i}: "${trimmedName}" is already in the database. Skipping.`);
-                skippedCount++;
-                continue;
-            }
-
             // Extract position/specialization
             const cleanPosition = position ? position.trim() : "o'qituvchi";
 
@@ -134,6 +174,16 @@ async function startImport() {
                 fs.writeFileSync(savePath, rowImage.buffer);
                 imagePath = `/uploads/${imgFileName}`;
                 console.log(`📸 Saved image for Row ${i} (${trimmedName}) -> ${imgFileName}`);
+            }
+
+            // Check if teacher already exists in the database
+            const existingUser = await Users.findOne({ name: trimmedName, role: 'teacher' });
+            if (existingUser) {
+                existingUser.image = imagePath;
+                await existingUser.save();
+                console.log(`🔄 Updated photo for existing teacher Row ${i}: "${trimmedName}" -> ${imagePath || 'empty'}`);
+                skippedCount++;
+                continue;
             }
 
             // Generate Username

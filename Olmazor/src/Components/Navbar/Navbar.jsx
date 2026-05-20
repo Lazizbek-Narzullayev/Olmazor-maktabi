@@ -37,17 +37,17 @@ const Navbar = () => {
             transition={{ duration: 0.8 }}
           >
             <NavLink to="/">
-              <div className="flex gap-2 items-center">
+              <div className="flex gap-3 items-center">
                 <img
                   src="https://static10.tgstat.ru/channels/_0/ef/efc24d28425fddf68c6a97465ad9f110.jpg"
-                  className="w-14 md:w-20"
+                  className="w-14 md:w-20 rounded-full"
                   alt="logo"
                 />
-                <img
-                  src="https://portal.piima.uz/images/icons/logo-name-new-blue.svg"
-                  className="w-24 md:w-32"
-                  alt="logo-name"
-                />
+                <div className="flex flex-col text-[#1c2b5e] font-serif leading-tight">
+                  <span className="text-[8px] md:text-[11px] font-bold tracking-[0.05em] uppercase">Ixtisoslashtirilgan</span>
+                  <span className="text-[8px] md:text-[11px] font-bold tracking-[0.05em] uppercase">Ta'lim muassasalari</span>
+                  <span className="text-lg md:text-2xl tracking-[0.1em] mt-0.5">AGENTLIGI</span>
+                </div>
               </div>
             </NavLink>
           </motion.div>
@@ -128,17 +128,17 @@ const Navbar = () => {
         ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
         {/* LOGO */}
-        <div className="text-center">
+        <div className="text-center flex flex-col items-center">
           <img
-            src="https://portal.piima.uz/images/icons/logo-icon-new.svg"
-            className="w-24 mx-auto"
+            src="https://static10.tgstat.ru/channels/_0/ef/efc24d28425fddf68c6a97465ad9f110.jpg"
+            className="w-20 mx-auto rounded-full mb-3 shadow-lg"
             alt=""
           />
-          <img
-            src="https://portal.piima.uz/images/icons/logo-name-new.svg"
-            className="w-32 mx-auto mt-2"
-            alt=""
-          />
+          <div className="flex flex-col text-white font-serif leading-tight text-center">
+             <span className="text-[10px] font-bold tracking-[0.05em] uppercase">Ixtisoslashtirilgan</span>
+             <span className="text-[10px] font-bold tracking-[0.05em] uppercase">Ta'lim muassasalari</span>
+             <span className="text-2xl tracking-[0.1em] mt-1">AGENTLIGI</span>
+          </div>
         </div>
 
         {/* MENU */}

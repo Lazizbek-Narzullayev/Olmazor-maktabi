@@ -1,5 +1,5 @@
 import express from "express";
-import { getAllUsers, createUser, updateUser, deleteUser, getUserById, getPublicTeachers } from "./userController.js";
+import { getAllUsers, createUser, updateUser, deleteUser, getUserById, getPublicTeachers, getPublicStudents } from "./userController.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
 import { allowRoles } from "../middleware/roleMiddleware.js";
 import { localUpload } from "../utils/localUpload.js";
@@ -7,6 +7,7 @@ import { localUpload } from "../utils/localUpload.js";
 export const usersRouter = express.Router();
 
 usersRouter.get('/public/teachers', getPublicTeachers);
+usersRouter.get('/public/students', getPublicStudents);
 
 usersRouter.use(verifyToken);
 

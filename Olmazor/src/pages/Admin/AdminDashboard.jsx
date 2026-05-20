@@ -294,7 +294,7 @@ export default function AdminDashboard() {
 
   const updateAppStatus = async (id, status) => {
     try {
-      await api.patch(`/applications/${id}`, { status });
+      await api.patch(`/applications/${id}/status`, { status });
       showToast('Ariza holati yangilandi ✅');
       fetchAll();
     } catch (e) { showToast('Xatolik yuz berdi'); }
@@ -664,11 +664,15 @@ export default function AdminDashboard() {
                                     <div><p className="font-black text-slate-900 text-lg tracking-tight">{a.ism} {a.familiya}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">📞 {a.telefon} · {a.sinf}-sinf</p></div>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    {a.status === 'kutilmoqda' && (
+                                    {a.status === 'kutilmoqda' ? (
                                         <>
                                             <button onClick={() => updateAppStatus(a._id, 'qabul_qilindi')} className="bg-emerald-600 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition">Qabul</button>
                                             <button onClick={() => updateAppStatus(a._id, 'rad_etildi')} className="bg-slate-100 text-slate-500 px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 hover:text-red-600 transition">Rad etish</button>
                                         </>
+                                    ) : (
+                                        <span className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border ${a.status === 'qabul_qilindi' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+                                            {a.status === 'qabul_qilindi' ? 'Qabul qilingan' : 'Rad etilgan'}
+                                        </span>
                                     )}
                                     <button onClick={() => deleteApp(a._id)} className="p-3 text-slate-300 hover:text-red-500 transition-colors"><FaTrash size={16} /></button>
                                 </div>

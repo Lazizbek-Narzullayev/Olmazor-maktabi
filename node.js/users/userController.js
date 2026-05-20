@@ -128,6 +128,17 @@ export const getPublicTeachers = async (req, res) => {
     }
 };
 
+export const getPublicStudents = async (req, res) => {
+    try {
+        const users = await Users.find({ role: 'student' })
+            .select('name image specialization olympiads role classId')
+            .populate('classId', 'name');
+        res.status(200).json({ status: 'success', data: { users } });
+    } catch (err) {
+        res.status(500).json({ status: 'error', message: err.message });
+    }
+};
+
 export const deleteUser = async (req, res) => {
     try {
         await Users.findByIdAndDelete(req.params.id);

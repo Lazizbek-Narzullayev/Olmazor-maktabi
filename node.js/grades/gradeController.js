@@ -1,5 +1,18 @@
 import { Grade } from "./gradeModel.js";
 
+export const getAllGrades = async (req, res) => {
+    try {
+        const grades = await Grade.find()
+            .populate('studentId', 'name')
+            .populate('subjectId', 'name')
+            .populate('teacherId', 'name')
+            .sort({ date: -1 });
+        res.status(200).json({ status: 'success', data: { grades } });
+    } catch (err) {
+        res.status(500).json({ status: 'error', message: err.message });
+    }
+};
+
 export const getStudentGrades = async (req, res) => {
     try {
         const grades = await Grade.find({ studentId: req.params.studentId })

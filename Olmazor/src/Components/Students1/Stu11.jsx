@@ -1,14 +1,14 @@
 import React from "react";
 import { motion } from "framer-motion";
 
-const students = [
+const fallbackStudents = [
   {
     id: 1,
     name: "Aliyev Azizbek",
     class: "11-A sinf",
     hobby: "Matematika, fizika",
     achievement: "Respublika olimpiadasi sovrindori",
-    img: "https://i.pravatar.cc/150?img=10",
+    img: "",
   },
   {
     id: 2,
@@ -16,7 +16,7 @@ const students = [
     class: "11-B sinf",
     hobby: "Ingliz tili, debat",
     achievement: "IELTS 7.5",
-    img: "https://i.pravatar.cc/150?img=20",
+    img: "",
   },
   {
     id: 3,
@@ -24,7 +24,7 @@ const students = [
     class: "11-A sinf",
     hobby: "Fizika, robototexnika",
     achievement: "Startap loyihasi muallifi",
-    img: "https://i.pravatar.cc/150?img=30",
+    img: "",
   },
   {
     id: 4,
@@ -32,7 +32,7 @@ const students = [
     class: "11-C sinf",
     hobby: "Biologiya",
     achievement: "Viloyat fan olimpiadasi",
-    img: "https://i.pravatar.cc/150?img=40",
+    img: "",
   },
   {
     id: 5,
@@ -40,7 +40,7 @@ const students = [
     class: "11-B sinf",
     hobby: "Tarix, notiqlik",
     achievement: "Debat turniri g‘olibi",
-    img: "https://i.pravatar.cc/150?img=50",
+    img: "",
   },
   {
     id: 6,
@@ -48,7 +48,7 @@ const students = [
     class: "11-A sinf",
     hobby: "Dasturlash, AI",
     achievement: "Web ilova ishlab chiqdi",
-    img: "https://i.pravatar.cc/150?img=60",
+    img: "",
   },
   {
     id: 7,
@@ -56,7 +56,7 @@ const students = [
     class: "11-B sinf",
     hobby: "Kimyo",
     achievement: "Laboratoriya loyihasi",
-    img: "https://i.pravatar.cc/150?img=70",
+    img: "",
   },
   {
     id: 8,
@@ -64,7 +64,7 @@ const students = [
     class: "11-C sinf",
     hobby: "Futbol",
     achievement: "Maktab jamoasi sardori",
-    img: "https://i.pravatar.cc/150?img=80",
+    img: "",
   },
   {
     id: 9,
@@ -72,7 +72,7 @@ const students = [
     class: "11-A sinf",
     hobby: "Adabiyot",
     achievement: "Insho tanlovi g‘olibi",
-    img: "https://i.pravatar.cc/150?img=90",
+    img: "",
   },
   {
     id: 10,
@@ -80,7 +80,7 @@ const students = [
     class: "11-B sinf",
     hobby: "Geografiya",
     achievement: "Xarita musobaqasi",
-    img: "https://i.pravatar.cc/150?img=14",
+    img: "",
   },
   {
     id: 11,
@@ -88,7 +88,7 @@ const students = [
     class: "11-C sinf",
     hobby: "Biologiya",
     achievement: "Eko-loyiha muallifi",
-    img: "https://i.pravatar.cc/150?img=24",
+    img: "",
   },
   {
     id: 12,
@@ -96,7 +96,7 @@ const students = [
     class: "11-A sinf",
     hobby: "Grafik dizayn",
     achievement: "Poster tanlovi g‘olibi",
-    img: "https://i.pravatar.cc/150?img=34",
+    img: "",
   },
   {
     id: 13,
@@ -104,7 +104,7 @@ const students = [
     class: "11-B sinf",
     hobby: "Tarix",
     achievement: "Intellektual o‘yin",
-    img: "https://i.pravatar.cc/150?img=44",
+    img: "",
   },
   {
     id: 14,
@@ -112,7 +112,7 @@ const students = [
     class: "11-C sinf",
     hobby: "Ingliz tili",
     achievement: "Speaking club yetakchisi",
-    img: "https://i.pravatar.cc/150?img=54",
+    img: "",
   },
   {
     id: 15,
@@ -120,11 +120,51 @@ const students = [
     class: "11-A sinf",
     hobby: "IT, startap",
     achievement: "Hackathon ishtirokchisi",
-    img: "https://i.pravatar.cc/150?img=64",
+    img: "",
   },
 ];
 
 const Stu11 = () => {
+  const [students, setStudents] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const { default: api } = await import("../../services/api");
+        const r = await api.get('/users/public/students');
+        const all = r.data.data.users;
+        
+        // Filter students for 11 classes
+        const filtered = all.filter(u => {
+          const className = u.classId?.name || '';
+          return className.startsWith('11');
+        });
+
+        const mapped = filtered.map(u => ({
+          id: u._id,
+          name: u.name,
+          class: u.classId?.name ? `${u.classId.name} sinf` : 'Sinf',
+          hobby: u.specialization || 'Hozircha ma\'lumot yo\'q',
+          achievement: u.olympiads?.[0] || 'Hozircha ma\'lumot yo\'q',
+          img: u.image
+        }));
+
+        if (mapped.length > 0) {
+          setStudents(mapped);
+        } else {
+          setStudents(fallbackStudents);
+        }
+      } catch (e) {
+        console.error("API error, using fallback data:", e);
+        setStudents(fallbackStudents);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStudents();
+  }, []);
+
   return (
     <div className="min-h-screen bg-blue-900 py-20 px-6">
       <h1 className="text-4xl font-bold text-center text-white mb-14">
@@ -132,7 +172,12 @@ const Stu11 = () => {
       </h1>
 
       <div className="max-w-7xl mx-auto grid md:grid-cols-2 lg:grid-cols-3 gap-10">
-        {students.map((s) => (
+        {loading ? (
+          <div className="col-span-full py-20 text-center">
+            <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-white/60 font-bold uppercase tracking-widest text-[10px]">Yuklanmoqda...</p>
+          </div>
+        ) : students.map((s) => (
           <motion.div
             key={s.id}
             whileHover={{ scale: 1.04 }}
@@ -146,11 +191,17 @@ const Stu11 = () => {
             <div className="absolute inset-0 rounded-[28px] border border-white/15 pointer-events-none" />
 
             <div className="relative z-10 flex items-center gap-4 mb-5">
-              <img
-                src={s.img}
-                alt={s.name}
-                className="w-16 h-16 rounded-full object-cover border-2 border-white/40"
-              />
+              {s.img ? (
+                <img
+                  src={s.img.startsWith('http') ? s.img : `${import.meta.env.VITE_API_URL || 'http://localhost:4200'}${s.img}`}
+                  alt={s.name}
+                  className="w-16 h-16 rounded-full object-cover border-2 border-white/40"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-blue-700 border-2 border-white/40 flex items-center justify-center text-3xl shadow-inner select-none">
+                  🎓
+                </div>
+              )}
               <div>
                 <h2 className="text-xl font-semibold">{s.name}</h2>
                 <p className="text-white/70">{s.class}</p>
