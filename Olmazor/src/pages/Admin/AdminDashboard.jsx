@@ -52,10 +52,23 @@ export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [active, setActive] = useState('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 1024);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 1024) setSidebarOpen(false);
+      else setSidebarOpen(true);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Data states
   const [stats, setStats] = useState({ users: 0, teachers: 0, students: 0, classes: 0, applications: 0, avgGrade: 0 });
+  // News (Yangiliklar) state
+  const [news, setNews] = useState([]);
+  const [newsModal, setNewsModal] = useState(false);
+  const [newsForm, setNewsForm] = useState({ title: '', content: '' });
   const [users, setUsers] = useState([]);
   const [classes, setClasses] = useState([]);
   const [schedule, setSchedule] = useState([]);
@@ -84,6 +97,7 @@ export default function AdminDashboard() {
   const [talentModal, setTalentModal] = useState(null); // Selected student for detail view
 
   const [classModal, setClassModal] = useState(false);
+  const [classDetailsModal, setClassDetailsModal] = useState(null);
   const [editClass, setEditClass] = useState(null);
   const [classForm, setClassForm] = useState({ name: '', teacherId: '', year: '2024-2025' });
 
@@ -357,8 +371,21 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* Mobile Backdrop */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-64' : 'w-0 overflow-hidden'} transition-all duration-300 bg-[#161c2d] flex-shrink-0 flex flex-col z-30 shadow-2xl`}>
+      <aside className={`
+        fixed lg:static inset-y-0 left-0 z-50
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0 lg:w-0'}
+        ${sidebarOpen ? 'w-64' : 'w-64 lg:w-0'}
+        transition-all duration-300 bg-[#161c2d] flex-shrink-0 flex flex-col shadow-2xl overflow-hidden
+      `}>
         <div className="p-6 border-b border-white/5">
           <div className="flex items-center gap-3">
              <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-500/20">A</div>
@@ -371,7 +398,10 @@ export default function AdminDashboard() {
 
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
           {NAV.map(({ id, label, icon: Icon }) => (
-            <button key={id} onClick={() => setActive(id)}
+            <button key={id} onClick={() => {
+                setActive(id);
+                if (window.innerWidth <= 1024) setSidebarOpen(false);
+              }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all
                 ${active === id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
               <Icon size={14} /> {label}
@@ -396,8 +426,8 @@ export default function AdminDashboard() {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white border-b border-slate-200 px-8 py-5 flex items-center justify-between z-20">
+      <div className="flex-1 flex flex-col overflow-hidden w-full">
+        <header className="bg-white border-b border-slate-200 px-4 sm:px-8 py-4 sm:py-5 flex items-center justify-between z-20">
           <div className="flex items-center gap-6">
             <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-slate-400 hover:text-slate-600 transition-colors">
               <FaBars size={18} />
@@ -421,27 +451,27 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar">
 
           {/* === DASHBOARD === */}
           {active === 'dashboard' && (
             <div className="space-y-8 animate-fade-in">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                {[
-                  { label: "Foydalanuvchilar", value: stats.users, icon: FaUsers, color: "bg-indigo-500" },
-                  { label: "O'qituvchilar", value: stats.teachers, icon: FaChalkboardTeacher, color: "bg-blue-500" },
-                  { label: "O'quvchilar", value: stats.students, icon: FaUsers, color: "bg-cyan-500" },
-                  { label: "Sinflar", value: stats.classes, icon: FaSchool, color: "bg-violet-500" },
-                  { label: "Arizalar", value: stats.applications, icon: FaClipboardList, color: "bg-orange-500" },
-                ].map(({ label, value, icon: Icon, color }) => (
-                  <div key={label} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex items-center gap-4 group hover:shadow-xl transition-all">
-                    <div className={`${color} p-4 rounded-2xl text-white shadow-lg`}><Icon size={20} /></div>
-                    <div>
-                      <p className="text-2xl font-black text-slate-800 tracking-tight">{value}</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {[
+                    { label: "Foydalanuvchilar", value: stats.users, icon: FaUsers, color: "bg-indigo-500" },
+                    { label: "O'qituvchilar", value: stats.teachers, icon: FaChalkboardTeacher, color: "bg-blue-500" },
+                    { label: "O'quvchilar", value: stats.students, icon: FaUsers, color: "bg-cyan-500" },
+                    { label: "Sinflar", value: stats.classes, icon: FaSchool, color: "bg-violet-500" },
+                    { label: "Arizalar", value: stats.applications, icon: FaClipboardList, color: "bg-orange-500" },
+                  ].map(({ label, value, icon: Icon, color }) => (
+                    <div key={label} className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex items-center gap-3 group hover:shadow-xl transition-all overflow-hidden">
+                      <div className={`${color} p-3 rounded-2xl text-white shadow-lg`}><Icon size={16} /></div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm md:text-base font-black text-slate-800 truncate">{value}</p>
+                        <p className="text-xs md:text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{label}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
 
               <div className="grid lg:grid-cols-2 gap-8">
@@ -594,15 +624,15 @@ export default function AdminDashboard() {
                   </div>
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {classes.map(c => (
-                      <div key={c._id} className="bg-white rounded-[32px] p-8 border border-slate-200 shadow-sm hover:shadow-xl transition-all group">
+                      <div key={c._id} onClick={() => setClassDetailsModal(c)} className="bg-white rounded-[32px] p-8 border border-slate-200 shadow-sm hover:shadow-xl transition-all group cursor-pointer">
                          <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-4">
                                <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 font-black text-xl group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-inner">{c.name}</div>
                                <div><p className="font-black text-slate-900 text-lg tracking-tight">{c.name}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{c.year}</p></div>
                             </div>
                             <div className="flex gap-2">
-                               <button onClick={() => openClassModal(c)} className="p-2 text-slate-400 hover:text-blue-500"><FaEdit size={14} /></button>
-                               <button onClick={() => deleteClass(c._id)} className="p-2 text-slate-400 hover:text-red-500"><FaTrash size={14} /></button>
+                               <button onClick={(e) => { e.stopPropagation(); openClassModal(c); }} className="p-2 text-slate-400 hover:text-blue-500"><FaEdit size={14} /></button>
+                               <button onClick={(e) => { e.stopPropagation(); deleteClass(c._id); }} className="p-2 text-slate-400 hover:text-red-500"><FaTrash size={14} /></button>
                             </div>
                          </div>
                          <div className="p-5 bg-slate-50 rounded-[24px] border border-slate-100 space-y-3">
@@ -963,7 +993,7 @@ export default function AdminDashboard() {
               {/* Sinf */}
               <div className="space-y-1">
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Sinf (Majburiy)</p>
-                  <select value={scheduleForm.classId} onChange={e => setScheduleForm({ ...scheduleForm, classId: e.target.value })} required className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-sm outline-none focus:border-indigo-500 transition-all">
+                  <select value={scheduleForm.classId} onChange={e => setScheduleForm({ ...scheduleForm, classId: e.target.value })} required className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2 text-xs md:text-sm font-bold outline-none focus:border-indigo-500 transition-all">
                     <option value="">— Sinfni tanlang —</option>
                     {classes.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                   </select>
@@ -995,7 +1025,7 @@ export default function AdminDashboard() {
               {/* Chorak (Auto) */}
               <div className="space-y-1">
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Chorak (Avtomatik)</p>
-                  <div className="w-full bg-slate-100 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-sm text-slate-500 cursor-not-allowed">
+                  <div className="w-full bg-slate-100 border border-slate-200 rounded-2xl px-4 py-2 text-xs md:text-sm font-bold text-slate-500 cursor-not-allowed">
                     {scheduleForm.quarter}-chorak
                   </div>
               </div>
@@ -1039,6 +1069,52 @@ export default function AdminDashboard() {
                   <button type="button" onClick={() => setScheduleModal(false)} className="w-full py-4 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-slate-600 transition-all">Orqaga</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Class Details Modal */}
+      {classDetailsModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center px-4 animate-fade-in" onClick={() => setClassDetailsModal(null)}>
+          <div className="bg-white rounded-[40px] w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden relative" onClick={e => e.stopPropagation()}>
+            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h2 className="text-xl font-black text-slate-800 flex items-center gap-3 tracking-tight">
+                <FaSchool className="text-indigo-600" /> {classDetailsModal.name} - Sinf o'quvchilari
+              </h2>
+              <button onClick={() => setClassDetailsModal(null)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                <FaTimes size={20} />
+              </button>
+            </div>
+            
+            <div className="p-8 overflow-y-auto custom-scrollbar flex-1 bg-white">
+              <div className="mb-6 p-5 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-between">
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Sinf rahbari:</span>
+                  <span className="text-sm font-black text-indigo-700">{classDetailsModal.teacherId?.name || 'Biriktirilmagan'}</span>
+              </div>
+              
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">O'quvchilar ro'yxati ({classDetailsModal.studentIds?.length || 0} ta)</h3>
+              
+              {classDetailsModal.studentIds && classDetailsModal.studentIds.length > 0 ? (
+                <div className="space-y-3">
+                  {classDetailsModal.studentIds.map((student, idx) => (
+                    <div key={student._id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 transition-colors">
+                       <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 font-black text-sm flex items-center justify-center">{idx + 1}</div>
+                          <div>
+                              <p className="text-sm font-bold text-slate-800">{student.name}</p>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">📞 {student.phoneNumber || 'Kiritilmagan'} • ID: {student.userName}</p>
+                          </div>
+                       </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 bg-slate-50 rounded-3xl border border-slate-100">
+                   <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300 shadow-sm"><FaUsers size={24} /></div>
+                   <p className="text-sm font-bold text-slate-500">Bu sinfda hozircha o'quvchilar yo'q.</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -1,11 +1,27 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaLocationDot } from "react-icons/fa6";
 import { NavLink } from 'react-router-dom';
 import { API_URL } from '../../services/api';
 
 const MaktabQabuli = () => {
   const [form, setForm] = useState({ ism: '', familiya: '', telefon: '', sinf: '' });
+  const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const res = await fetch(`${API_URL}/classes/public`);
+        const data = await res.json();
+        if (data.status === 'success') {
+          setClasses(data.data.classes);
+        }
+      } catch (err) {
+        console.error("Sinflarni yuklashda xatolik:", err);
+      }
+    };
+    fetchClasses();
+  }, []);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
@@ -101,14 +117,17 @@ const MaktabQabuli = () => {
               className="px-4 py-3 rounded-xl border focus:ring-2 focus:ring-blue-600 outline-none"
             />
 
-            <input
-              type="text"
-              placeholder="Qaysi sinfga (masalan: 5)"
+            <select
               value={form.sinf}
               onChange={e => setForm({ ...form, sinf: e.target.value })}
               required
-              className="px-4 py-3 rounded-xl border focus:ring-2 focus:ring-blue-600 outline-none"
-            />
+              className="px-4 py-3 rounded-xl border focus:ring-2 focus:ring-blue-600 outline-none bg-white text-gray-700"
+            >
+              <option value="" disabled>Qaysi sinfga?</option>
+              {classes.map((c) => (
+                <option key={c._id} value={c.name}>{c.name}</option>
+              ))}
+            </select>
           </div>
 
           <button

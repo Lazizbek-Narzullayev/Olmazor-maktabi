@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global responsive font sizing */
+:root {
+  font-size: 14px; /* default for mobile */
+}
+@media (min-width: 640px) {
+  :root { font-size: 16px; }
+}
+
 @keyframes shine {
   0% {
     transform: translateX(-150%) skewX(-20deg);

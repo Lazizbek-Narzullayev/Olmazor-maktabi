@@ -14,6 +14,15 @@ export const getAllClasses = async (req, res) => {
     }
 };
 
+export const getPublicClasses = async (req, res) => {
+    try {
+        const classes = await Class.find().select('_id name').sort({ name: 1 });
+        res.status(200).json({ status: 'success', data: { classes } });
+    } catch (err) {
+        res.status(500).json({ status: 'error', message: err.message });
+    }
+};
+
 export const getClassById = async (req, res) => {
     try {
         const cls = await Class.findById(req.params.id).populate('teacherId', 'name userName');
