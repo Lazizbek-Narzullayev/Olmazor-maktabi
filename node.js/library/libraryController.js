@@ -2,74 +2,85 @@ import { Library } from './libraryModel.js';
 import fs from 'fs';
 import path from 'path';
 
+// ─── Upload (admin ham, o'qituvchi ham ishlatishi mumkin) ─────────────────────
 export const uploadFile = async (req, res) => {
     try {
-        console.log('Upload Request - Body:', req.body);
-        console.log('Upload Request - File:', req.file);
-
-        if (!req.file) {
-            console.error('No file received');
-            return res.status(400).json({ message: 'Fayl yuklanmadi' });
+        // If a URL is provided, use it directly; otherwise expect a file upload
+        const { title, description, author, category, type, uploadedBy, url } = req.body;
+        let fileUrl = '';
+        let fileId = '';
+        if (url) {
+            fileUrl = url;
+        } else {
+            if (!req.file) {
+                return res.status(400).json({ message: 'Fayl yuklanmadi' });
+            }
+            fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+            fileId = req.file.filename;
         }
 
-        const { title, description, category, teacherId } = req.body;
-
-        // Save local path for the fileUrl (accessible via /uploads static route)
-        const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-
         const newFile = await Library.create({
-            title: title || 'Noma\'lum',
+            title: title || 'Nomsiz kitob',
             description: description || '',
-            category: category || 'Umumiy',
-            teacherId: teacherId, 
-            fileUrl: fileUrl,
-            fileId: req.file.filename,
+            author: author || '',
+            category: category || 'Boshqa',
+            type: type || 'general',
+            uploadedBy: uploadedBy || null,
+            fileUrl,
+            fileId,
         });
 
-        console.log('New file created in DB:', newFile);
-        res.status(201).json({ status: 'success', data: { file: newFile } });
+        const populated = await Library.findById(newFile._id).populate('uploadedBy', 'name role specialization');
+        res.status(201).json({ status: 'success', data: { file: populated } });
     } catch (e) {
-        console.error('SERVER UPLOAD ERROR:', e);
+        console.error('UPLOAD ERROR:', e);
         res.status(500).json({ status: 'error', message: e.message });
     }
 };
 
+// ─── Barcha kitoblarni olish (type bo'yicha filter) ──────────────────────────
 export const getFiles = async (req, res) => {
     try {
-        const { category } = req.query;
-        let filter = {};
+        const { type, category } = req.query;
+        const filter = {};
+        if (type)     filter.type     = type;
         if (category) filter.category = category;
 
-        const files = await Library.find(filter).populate('teacherId', 'name');
-        console.log(`Fetched ${files.length} files from library`);
+        const files = await Library.find(filter)
+            .populate('uploadedBy', 'name role specialization')
+            .sort({ createdAt: -1 });
+
         res.status(200).json({ status: 'success', data: { files } });
     } catch (e) {
         res.status(500).json({ status: 'error', message: e.message });
     }
 };
 
+// ─── Faylni o'chirish ─────────────────────────────────────────────────────────
 export const deleteFile = async (req, res) => {
     try {
         const file = await Library.findById(req.params.id);
         if (!file) return res.status(404).json({ message: 'Fayl topilmadi' });
 
-        // Delete from local disk
-        const filePath = path.join('uploads', file.fileId);
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
+        // Diskdan o'chirish
+        if (file.fileId) {
+            const filePath = path.join('uploads', file.fileId);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
         }
 
         await Library.findByIdAndDelete(req.params.id);
-        res.status(200).json({ status: 'success', message: 'Fayl o\'chirildi' });
+        res.status(200).json({ status: 'success', message: "Fayl o'chirildi" });
     } catch (e) {
         res.status(500).json({ status: 'error', message: e.message });
     }
 };
+
+// ─── Yuklab olishlar sonini oshirish ─────────────────────────────────────────
 export const trackDownload = async (req, res) => {
     try {
         const file = await Library.findByIdAndUpdate(
-            req.params.id, 
-            { $inc: { downloads: 1 } }, 
+            req.params.id,
+            { $inc: { downloads: 1 } },
             { new: true }
         );
         if (!file) return res.status(404).json({ status: 'error', message: 'Fayl topilmadi' });

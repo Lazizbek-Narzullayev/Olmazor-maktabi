@@ -5,7 +5,8 @@ import api from '../../services/api';
 import {
   FaUsers, FaChalkboardTeacher, FaSchool, FaClipboardList,
   FaCalendarAlt, FaSignOutAlt, FaTachometerAlt, FaPlus,
-  FaEdit, FaTrash, FaTimes, FaCheck, FaBan, FaBars, FaKey, FaShieldAlt, FaStar, FaGraduationCap, FaFileSignature, FaLinode, FaLink, FaListUl
+  FaEdit, FaTrash, FaTimes, FaCheck, FaBan, FaBars, FaKey, FaShieldAlt, FaStar, FaGraduationCap, FaFileSignature, FaLinode, FaLink, FaListUl,
+  FaBook, FaDownload, FaFilePdf, FaChalkboard, FaSearch, FaFilter
 } from 'react-icons/fa';
 import { SPECIALIZATIONS, BASE_SUBJECTS, getBaseSubject } from '../../constants/TeacherSpecializations';
 
@@ -17,8 +18,11 @@ const NAV = [
   { id: 'assignments', label: 'Sinflarni biriktirish', icon: FaLink },
   { id: 'talents', label: 'Iqtidorli talabalar', icon: FaStar },
   { id: 'applications', label: 'Qabul arizalari', icon: FaClipboardList },
+  { id: 'library', label: 'Kutubxona', icon: FaBook },
   { id: 'settings', label: 'Sozlamalar', icon: FaKey },
 ];
+
+const BOOK_CATEGORIES = ['Boshqa', 'Matematika', 'Ona tili', 'Ingliz tili', 'Tarix', 'Fizika', 'Kimyo', 'Biologiya', 'Geografiya', 'Informatika', 'Adabiyot', 'Rus tili', 'Chizmachilik', 'Musiqa', 'Jismoniy tarbiya'];
 
 const DAYS = ['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
 
@@ -75,6 +79,17 @@ export default function AdminDashboard() {
   const [applications, setApplications] = useState([]);
   const [allGrades, setAllGrades] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Library states
+  const [libBooks, setLibBooks] = useState([]);
+  const [libTab, setLibTab] = useState('general'); // 'general' | 'teacher'
+  const [libSearch, setLibSearch] = useState('');
+  const [libCatFilter, setLibCatFilter] = useState('');
+  const [libModal, setLibModal] = useState(false);
+  const [libForm, setLibForm] = useState({ title: '', description: '', author: '', category: 'Boshqa', type: 'general', url: '' });
+  const [libUseUrl, setLibUseUrl] = useState(false);
+  const [libFile, setLibFile] = useState(null);
+  const [libLoading, setLibLoading] = useState(false);
 
   // Modal states
   const [userModal, setUserModal] = useState(false);
@@ -172,8 +187,67 @@ export default function AdminDashboard() {
         const r = await api.get('/grades');
         setAllGrades(r.data.data.grades);
       }
+      if (active === 'library') {
+        const r = await api.get('/library');
+        setLibBooks(r.data.data.files);
+      }
     } catch (e) { console.error(e); }
     setLoading(false);
+  };
+
+  const uploadLibBook = async (e) => {
+    e.preventDefault();
+    // If URL is provided, skip file upload
+    if (libUseUrl && !libForm.url) return showToast('Kitob URL kiriting ❌');
+    if (!libUseUrl && !libFile) return showToast('PDF fayl tanlang ❌');
+    setLibLoading(true);
+    try {
+      if (libUseUrl) {
+        // Send JSON payload with URL
+        await api.post('/library/upload', {
+          title: libForm.title,
+          description: libForm.description,
+          author: libForm.author,
+          category: libForm.category,
+          type: libForm.type,
+          uploadedBy: user?._id || '',
+          url: libForm.url,
+        });
+      } else {
+        const fd = new FormData();
+        fd.append('file', libFile);
+        fd.append('title', libForm.title);
+        fd.append('description', libForm.description);
+        fd.append('author', libForm.author);
+        fd.append('category', libForm.category);
+        fd.append('type', libForm.type);
+        fd.append('uploadedBy', user?._id || '');
+        await api.post('/library/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      }
+      showToast('Kitob muvaffaqiyatli yuklandi ✅');
+      setLibModal(false);
+      setLibForm({ title: '', description: '', author: '', category: 'Boshqa', type: 'general', url: '' });
+      setLibFile(null);
+      setLibUseUrl(false);
+      const r = await api.get('/library');
+      setLibBooks(r.data.data.files);
+    } catch (err) {
+      showToast('Xatolik: ' + (err.response?.data?.message || err.message));
+    }
+    setLibLoading(false);
+  };
+
+  const deleteLibBook = async (id) => {
+    if (!confirm("Kitobni o'chirishni tasdiqlaysizmi?")) return;
+    await api.delete(`/library/${id}`);
+    showToast("Kitob o'chirildi ✅");
+    const r = await api.get('/library');
+    setLibBooks(r.data.data.files);
+  };
+
+  const handleLibDownload = async (book) => {
+    await api.patch(`/library/${book._id}/download`);
+    window.open(book.fileUrl, '_blank');
   };
 
   const openUserModal = (u = null) => {
@@ -849,8 +923,217 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {/* === KUTUBXONA === */}
+          {active === 'library' && (() => {
+            const filtered = libBooks
+              .filter(b => b.type === libTab)
+              .filter(b => !libCatFilter || b.category === libCatFilter)
+              .filter(b => !libSearch || b.title.toLowerCase().includes(libSearch.toLowerCase()) || (b.author||'').toLowerCase().includes(libSearch.toLowerCase()));
+            return (
+              <div className="space-y-6 animate-fade-in">
+                {/* Header */}
+                <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
+                        <FaBook className="text-white" size={20} />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-black text-slate-800 tracking-tight">Maktab Kutubxonasi</h2>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                          Umumiy: {libBooks.filter(b=>b.type==='general').length} ta · Ustozlar: {libBooks.filter(b=>b.type==='teacher').length} ta
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { setLibForm({ title:'', description:'', author:'', category:'Boshqa', type: libTab }); setLibFile(null); setLibModal(true); }}
+                      className="bg-indigo-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-indigo-700 transition shadow-lg shadow-indigo-100"
+                    >
+                      <FaPlus /> Kitob yuklash
+                    </button>
+                  </div>
+
+                  {/* Tabs */}
+                  <div className="flex gap-2 mb-5">
+                    {[{ key:'general', label:'📚 Umumiy kutubxona' }, { key:'teacher', label:'👨‍🏫 Ustozlar kutubxonasi' }].map(t => (
+                      <button key={t.key} onClick={() => setLibTab(t.key)}
+                        className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${libTab === t.key ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Search & Filter */}
+                  <div className="flex flex-wrap gap-3">
+                    <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 flex-1 min-w-[200px]">
+                      <FaSearch className="text-slate-400" size={12} />
+                      <input
+                        type="text" placeholder="Kitob nomi yoki muallif..."
+                        value={libSearch} onChange={e => setLibSearch(e.target.value)}
+                        className="bg-transparent outline-none text-xs font-bold text-slate-700 flex-1"
+                      />
+                    </div>
+                    <select
+                      value={libCatFilter} onChange={e => setLibCatFilter(e.target.value)}
+                      className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs font-bold outline-none focus:border-indigo-400 text-slate-600"
+                    >
+                      <option value="">Barcha kategoriyalar</option>
+                      {BOOK_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Book Cards */}
+                {filtered.length === 0 ? (
+                  <div className="bg-white rounded-3xl p-16 border border-slate-200 flex flex-col items-center justify-center text-center shadow-sm">
+                    <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mb-4 shadow-inner">
+                      <FaBook size={32} className="text-slate-300" />
+                    </div>
+                    <p className="text-slate-400 font-black text-sm">Hali kitoblar yo'q</p>
+                    <p className="text-slate-300 text-[10px] font-bold uppercase tracking-widest mt-1">
+                      {libTab === 'general' ? 'Umumiy kutubxona bo\'sh' : 'Ustozlar hali fayl yuklamagan'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    {filtered.map(book => (
+                      <div key={book._id} className="bg-white rounded-[28px] border border-slate-200 shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all group flex flex-col overflow-hidden">
+                        {/* Top color bar */}
+                        <div className={`h-2 w-full ${book.type === 'general' ? 'bg-gradient-to-r from-indigo-500 to-violet-500' : 'bg-gradient-to-r from-emerald-500 to-teal-500'}`} />
+                        <div className="p-5 flex flex-col flex-1">
+                          {/* Icon + badge */}
+                          <div className="flex items-start justify-between mb-4">
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner ${book.type === 'general' ? 'bg-indigo-50' : 'bg-emerald-50'}`}>
+                              <FaFilePdf size={22} className={book.type === 'general' ? 'text-indigo-500' : 'text-emerald-500'} />
+                            </div>
+                            <span className={`text-[8px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest ${book.type === 'general' ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                              {book.category}
+                            </span>
+                          </div>
+                          {/* Info */}
+                          <h3 className="font-black text-slate-800 text-sm tracking-tight line-clamp-2 mb-1">{book.title}</h3>
+                          {book.author && <p className="text-[10px] font-bold text-slate-400 mb-2">✍️ {book.author}</p>}
+                          {book.description && <p className="text-[10px] text-slate-400 font-bold line-clamp-2 mb-3">{book.description}</p>}
+                          {book.uploadedBy && (
+                            <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-3">
+                              👤 {book.uploadedBy.name}
+                            </p>
+                          )}
+                          <div className="mt-auto flex items-center justify-between pt-3 border-t border-slate-100">
+                            <span className="text-[9px] font-black text-slate-400 flex items-center gap-1">
+                              <FaDownload size={9} /> {book.downloads || 0} marta
+                            </span>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleLibDownload(book)}
+                                className="p-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all"
+                                title="Yuklab olish"
+                              >
+                                <FaDownload size={11} />
+                              </button>
+                              <button
+                                onClick={() => deleteLibBook(book._id)}
+                                className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-600 hover:text-white transition-all"
+                                title="O'chirish"
+                              >
+                                <FaTrash size={11} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
         </main>
       </div>
+
+      {/* === KITOB YUKLASH MODALI === */}
+      {libModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-[40px] p-8 w-full max-w-lg shadow-2xl border border-slate-200">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <FaBook className="text-white" size={14} />
+                </div>
+                <h3 className="text-lg font-black text-slate-900 tracking-tight">Kitob yuklash</h3>
+              </div>
+              <button onClick={() => setLibModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
+                <FaTimes size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={uploadLibBook} className="space-y-4">
+              {/* Type tabs */}
+              <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl">
+                {[{ v:'general', l:'📚 Umumiy kutubxona' }, { v:'teacher', l:'👨‍🏫 Ustozlar bo\'limi' }].map(t => (
+                  <button key={t.v} type="button" onClick={() => setLibForm({...libForm, type: t.v})}
+                    className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${libForm.type === t.v ? 'bg-white text-indigo-700 shadow-md' : 'text-slate-500'}`}>
+                    {t.l}
+                  </button>
+                ))}
+              </div>
+
+              <input required type="text" placeholder="Kitob nomi *"
+                value={libForm.title} onChange={e => setLibForm({...libForm, title: e.target.value})}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-indigo-400 transition-all" />
+
+              <input type="text" placeholder="Muallif"
+                value={libForm.author} onChange={e => setLibForm({...libForm, author: e.target.value})}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-indigo-400 transition-all" />
+
+              <select value={libForm.category} onChange={e => setLibForm({...libForm, category: e.target.value})}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-indigo-400 transition-all">
+                {BOOK_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+
+              <textarea placeholder="Tavsif (ixtiyoriy)" rows={2}
+                value={libForm.description} onChange={e => setLibForm({...libForm, description: e.target.value})}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 text-sm font-bold outline-none focus:border-indigo-400 transition-all resize-none" />
+
+              {/* File Upload */}
+            <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl">
+              {/* Toggle between file upload and URL */}
+              <label className="flex items-center gap-2 text-sm font-black">
+                <input type="checkbox" checked={libUseUrl} onChange={e => setLibUseUrl(e.target.checked)} className="accent-indigo-600" />
+                URL orqali yuklash
+              </label>
+            </div>
+
+            {libUseUrl ? (
+              <input type="text" placeholder="Kitob URL (https://...)" value={libForm.url}
+                onChange={e => setLibForm({ ...libForm, url: e.target.value })}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-indigo-400 transition-all" />
+            ) : (
+              <label className={`flex flex-col items-center justify-center w-full py-8 border-2 border-dashed rounded-3xl cursor-pointer transition-all ${libFile ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50/40'}`}>
+                <FaFilePdf size={28} className={libFile ? 'text-indigo-500' : 'text-slate-300'} />
+                <p className="text-[10px] font-black uppercase tracking-widest mt-2 text-slate-500">
+                  {libFile ? libFile.name : 'PDF fayl tanlang'}
+                </p>
+                {libFile && <p className="text-[9px] text-slate-400 mt-1">{(libFile.size / 1024 / 1024).toFixed(2)} MB</p>}
+                <input type="file" accept=".pdf" className="hidden" onChange={e => setLibFile(e.target.files[0] || null)} />
+              </label>
+            )}
+
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setLibModal(false)}
+                  className="flex-1 py-3.5 border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all">
+                  Bekor qilish
+                </button>
+                <button type="submit" disabled={libLoading}
+                  className="flex-2 flex-grow-[2] py-3.5 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:opacity-60 disabled:cursor-not-allowed">
+                  {libLoading ? 'Yuklanmoqda...' : '✅ Saqlash'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Talent Detail Modal */}
       {talentModal && (
