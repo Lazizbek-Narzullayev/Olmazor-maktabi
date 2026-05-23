@@ -91,7 +91,12 @@ export default function AdminDashboard() {
   const [libFile, setLibFile] = useState(null);
   const [libLoading, setLibLoading] = useState(false);
 
-  // Modal states
+  // Iqtidorli talabalar (manual) states
+  const [talentsList, setTalentsList] = useState([]);
+  const [talentModal, setTalentModal] = useState(false);
+  const [editTalent, setEditTalent] = useState(null);
+  const [talentForm, setTalentForm] = useState({ name: '', className: '', imageUrl: '', achievement: '', description: '', year: new Date().getFullYear().toString() });
+  const [talentDetailModal, setTalentDetailModal] = useState(null);
   const [userModal, setUserModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
   const [userForm, setUserForm] = useState({ userName: '', password: '', name: '', role: 'student', classId: '', phoneNumber: '', olympiads: '', image: '', specialization: '' });
@@ -109,7 +114,6 @@ export default function AdminDashboard() {
     if (activeClass) setClassHeadId(activeClass.teacherId?._id || activeClass.teacherId || '');
   }, [activeClass]);
 
-  const [talentModal, setTalentModal] = useState(null); // Selected student for detail view
 
   const [classModal, setClassModal] = useState(false);
   const [classDetailsModal, setClassDetailsModal] = useState(null);
@@ -191,6 +195,10 @@ export default function AdminDashboard() {
         const r = await api.get('/library');
         setLibBooks(r.data.data.files);
       }
+      if (active === 'talents') {
+        const r = await api.get('/talents');
+        setTalentsList(r.data.data.talents);
+      }
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -248,6 +256,41 @@ export default function AdminDashboard() {
   const handleLibDownload = async (book) => {
     await api.patch(`/library/${book._id}/download`);
     window.open(book.fileUrl, '_blank');
+  };
+
+  const openTalentModal = (t = null) => {
+    setEditTalent(t);
+    setTalentForm(t
+      ? { name: t.name, className: t.className, imageUrl: t.imageUrl || '', achievement: t.achievement, description: t.description || '', year: t.year || new Date().getFullYear().toString() }
+      : { name: '', className: '', imageUrl: '', achievement: '', description: '', year: new Date().getFullYear().toString() }
+    );
+    setTalentModal(true);
+  };
+
+  const saveTalent = async (e) => {
+    e.preventDefault();
+    try {
+      if (editTalent) {
+        await api.patch(`/talents/${editTalent._id}`, talentForm);
+        showToast('Yangilandi ✅');
+      } else {
+        await api.post('/talents', talentForm);
+        showToast('Iqtidorli talaba qo\'shildi ✅');
+      }
+      setTalentModal(false);
+      const r = await api.get('/talents');
+      setTalentsList(r.data.data.talents);
+    } catch (err) {
+      showToast('Xatolik: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const deleteTalentEntry = async (id) => {
+    if (!confirm("O'chirishni tasdiqlaysizmi?")) return;
+    await api.delete(`/talents/${id}`);
+    showToast("O'chirildi ✅");
+    const r = await api.get('/talents');
+    setTalentsList(r.data.data.talents);
   };
 
   const openUserModal = (u = null) => {
@@ -596,42 +639,88 @@ export default function AdminDashboard() {
 
           {/* === IQTIDORLI TALABALAR === */}
           {active === 'talents' && (
-            <div className="space-y-8 animate-fade-in">
-                <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
-                    <div className="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center text-amber-500 mb-6 shadow-inner"><FaStar size={36} /></div>
-                    <h2 className="text-2xl font-black text-slate-800 tracking-tight">Iqtidorli talabalar ro'yxati</h2>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2">GPA natijasi 4.5 dan yuqori bo'lgan o'quvchilar</p>
+            <div className="space-y-6 animate-fade-in">
+              {/* Header */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-200">
+                    <FaStar className="text-white" size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-black text-slate-800 tracking-tight">Iqtidorli Talabalar</h2>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{talentsList.length} ta yutuqchi o'quvchi</p>
+                  </div>
                 </div>
+                <button onClick={() => openTalentModal()}
+                  className="bg-amber-500 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-amber-600 transition shadow-lg shadow-amber-100">
+                  <FaPlus /> Talaba qo'shish
+                </button>
+              </div>
 
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {talentedStudents.map(s => (
-                        <div key={s._id} onClick={() => setTalentModal(s)} className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm hover:shadow-xl hover:border-amber-400 transition-all cursor-pointer group">
-                             <div className="flex items-center justify-between mb-6">
-                                 <div className="flex items-center gap-4">
-                                     <div className="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-black text-lg group-hover:scale-110 transition-transform shadow-lg">{s.name[0]}</div>
-                                     <div>
-                                         <h4 className="font-black text-slate-800 text-sm tracking-tight">{s.name}</h4>
-                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{s.classId?.name || 'Sinf-siz'} sinf</p>
-                                     </div>
-                                 </div>
-                                 <div className="bg-amber-50 px-4 py-2 rounded-2xl border border-amber-100 flex flex-col items-center">
-                                     <span className="text-amber-600 font-black text-xs">{s.gpa}</span>
-                                     <span className="text-[7px] font-black text-amber-500 uppercase tracking-tighter">GPA</span>
-                                 </div>
-                             </div>
-                             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
-                                 <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-widest">
-                                     <span className="text-slate-400">Sinf rahbari</span>
-                                     <span className="text-slate-800">{classes.find(c => c._id === s.classId?._id)?.teacherId?.name || '—'}</span>
-                                 </div>
-                                 <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-widest">
-                                     <span className="text-slate-400">Muvaffaqiyat</span>
-                                     <span className="text-emerald-600 font-black">YUQORI</span>
-                                 </div>
-                             </div>
-                        </div>
-                    ))}
+              {/* Cards */}
+              {talentsList.length === 0 ? (
+                <div className="bg-white rounded-3xl p-16 border border-slate-200 flex flex-col items-center justify-center text-center shadow-sm">
+                  <div className="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center mb-4 shadow-inner">
+                    <FaStar size={32} className="text-amber-300" />
+                  </div>
+                  <p className="text-slate-400 font-black text-sm">Hali iqtidorli talabalar qo'shilmagan</p>
                 </div>
+              ) : (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {talentsList.map(t => (
+                    <div key={t._id}
+                      className="bg-white rounded-[32px] border border-slate-200 shadow-sm hover:shadow-2xl hover:border-amber-300 transition-all group flex flex-col overflow-hidden cursor-pointer"
+                      onClick={() => setTalentDetailModal(t)}
+                    >
+                      {/* Photo */}
+                      <div className="h-44 bg-gradient-to-br from-amber-50 to-orange-50 relative overflow-hidden">
+                        {t.imageUrl ? (
+                          <img src={t.imageUrl} alt={t.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            onError={e => { e.target.style.display='none'; }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <div className="w-20 h-20 bg-amber-200 rounded-full flex items-center justify-center text-amber-700 font-black text-3xl shadow-lg">
+                              {t.name[0]}
+                            </div>
+                          </div>
+                        )}
+                        {/* Year badge */}
+                        <span className="absolute top-3 right-3 bg-white/90 backdrop-blur text-amber-600 text-[9px] font-black px-2.5 py-1 rounded-full shadow-sm">{t.year}</span>
+                      </div>
+
+                      {/* Info */}
+                      <div className="p-5 flex flex-col flex-1">
+                        <h3 className="font-black text-slate-800 text-sm tracking-tight mb-0.5">{t.name}</h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{t.className}-sinf</p>
+
+                        {/* Achievement badge */}
+                        <div className="flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 rounded-2xl px-3 py-2.5 mb-3">
+                          <FaStar size={10} className="text-amber-500 flex-shrink-0" />
+                          <span className="text-xs font-black text-amber-700 line-clamp-2">{t.achievement}</span>
+                        </div>
+
+                        {t.description && (
+                          <p className="text-[10px] text-slate-400 font-bold line-clamp-2 mb-3">{t.description}</p>
+                        )}
+
+                        {/* Actions */}
+                        <div className="mt-auto flex gap-2 pt-3 border-t border-slate-100" onClick={e => e.stopPropagation()}>
+                          <button onClick={() => openTalentModal(t)}
+                            className="flex-1 py-2 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black hover:bg-blue-50 hover:text-blue-600 transition-all flex items-center justify-center gap-1">
+                            <FaEdit size={10} /> Tahrir
+                          </button>
+                          <button onClick={() => deleteTalentEntry(t._id)}
+                            className="flex-1 py-2 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black hover:bg-red-50 hover:text-red-600 transition-all flex items-center justify-center gap-1">
+                            <FaTrash size={10} /> O'chirish
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -1135,40 +1224,131 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Talent Detail Modal */}
+      {/* === IQTIDORLI TALABA QO'SHISH / TAHRIRLASH MODALI === */}
       {talentModal && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in">
-              <div className="bg-white rounded-[48px] p-12 w-full max-w-2xl shadow-2xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-amber-50 rounded-full translate-x-32 -translate-y-32 -z-10" />
-                  <button onClick={() => setTalentModal(null)} className="absolute top-8 right-8 text-slate-400 hover:text-slate-800 transition-all"><FaTimes size={24} /></button>
-                  <div className="flex flex-col items-center text-center mb-10">
-                      <div className="w-24 h-24 bg-slate-900 rounded-[32px] flex items-center justify-center text-white font-black text-3xl shadow-2xl mb-6">{talentModal.name[0]}</div>
-                      <h3 className="text-3xl font-black text-slate-800 tracking-tight">{talentModal.name}</h3>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-2">AKADEMIK MUVAFFAQIYAT KARTASI</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-6 mb-10">
-                      <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col items-center">
-                          <span className="text-amber-600 font-black text-2xl">{talentModal.gpa}</span>
-                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">UMUMIY GPA</span>
-                      </div>
-                      <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col items-center">
-                          <span className="text-indigo-600 font-black text-2xl">{talentModal.classId?.name || '—'}</span>
-                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">O'QUVTCHI SINFI</span>
-                      </div>
-                  </div>
-                  <div className="space-y-4">
-                       <h4 className="font-black text-slate-800 text-sm uppercase tracking-widest flex items-center gap-2"><FaFileSignature className="text-amber-500" /> Olimpiadalar & Yutuqlar</h4>
-                       <div className="flex flex-wrap gap-2">
-                           {(talentModal.olympiads && talentModal.olympiads.length > 0) ? talentModal.olympiads.map(o => (
-                               <span key={o} className="bg-amber-50 text-amber-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-tight border border-amber-100">{o}</span>
-                           )) : <p className="text-xs text-slate-400 font-bold italic">Hozircha yutuqlar qayd etilmagan</p>}
-                       </div>
-                  </div>
-                  <div className="mt-12 pt-8 border-t border-slate-100 flex justify-center">
-                       <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em]">OLMAZOR ACADEMIC EXCELLENCE PROGRAM</p>
-                  </div>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-[40px] p-8 w-full max-w-lg shadow-2xl border border-slate-200">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-500 rounded-2xl flex items-center justify-center shadow-lg">
+                  <FaStar className="text-white" size={14} />
+                </div>
+                <h3 className="text-lg font-black text-slate-900 tracking-tight">
+                  {editTalent ? 'Talabani tahrirlash' : "Iqtidorli talaba qo'shish"}
+                </h3>
               </div>
+              <button onClick={() => setTalentModal(false)} className="text-slate-400 hover:text-red-500 transition-colors">
+                <FaTimes size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={saveTalent} className="space-y-4">
+              {/* Photo preview */}
+              {talentForm.imageUrl && (
+                <div className="flex justify-center">
+                  <img src={talentForm.imageUrl} alt="preview"
+                    className="w-24 h-24 rounded-2xl object-cover border-2 border-amber-200 shadow-md"
+                    onError={e => e.target.style.display='none'} />
+                </div>
+              )}
+
+              <input required type="text" placeholder="Ism Familiya *"
+                value={talentForm.name} onChange={e => setTalentForm({...talentForm, name: e.target.value})}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-amber-400 transition-all" />
+
+              <div className="grid grid-cols-2 gap-3">
+                <input required type="text" placeholder="Sinf (masalan: 9-B) *"
+                  value={talentForm.className} onChange={e => setTalentForm({...talentForm, className: e.target.value})}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-amber-400 transition-all" />
+                <input type="text" placeholder="Yil (2025)"
+                  value={talentForm.year} onChange={e => setTalentForm({...talentForm, year: e.target.value})}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-amber-400 transition-all" />
+              </div>
+
+              <input required type="text" placeholder="Yutuq * (masalan: IELTS 7.0, Matematika Olimpiadasi 1-o'rin)"
+                value={talentForm.achievement} onChange={e => setTalentForm({...talentForm, achievement: e.target.value})}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-amber-400 transition-all" />
+
+              <input type="url" placeholder="Rasm URL (https://...)"
+                value={talentForm.imageUrl} onChange={e => setTalentForm({...talentForm, imageUrl: e.target.value})}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-amber-400 transition-all" />
+
+              <textarea placeholder="Qo'shimcha ma'lumot (ixtiyoriy)" rows={2}
+                value={talentForm.description} onChange={e => setTalentForm({...talentForm, description: e.target.value})}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 text-sm font-bold outline-none focus:border-amber-400 transition-all resize-none" />
+
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setTalentModal(false)}
+                  className="flex-1 py-3.5 border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all">
+                  Bekor qilish
+                </button>
+                <button type="submit"
+                  className="flex-grow-[2] py-3.5 bg-amber-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-lg shadow-amber-100">
+                  {editTalent ? '✅ Saqlash' : '⭐ Qo\'shish'}
+                </button>
+              </div>
+            </form>
           </div>
+        </div>
+      )}
+
+      {/* === IQTIDORLI TALABA DETAIL MODAL === */}
+      {talentDetailModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setTalentDetailModal(null)}>
+          <div className="bg-white rounded-[48px] w-full max-w-md shadow-2xl overflow-hidden relative"
+            onClick={e => e.stopPropagation()}>
+            {/* Photo header */}
+            <div className="h-56 bg-gradient-to-br from-amber-400 to-orange-500 relative overflow-hidden">
+              {talentDetailModal.imageUrl ? (
+                <img src={talentDetailModal.imageUrl} alt={talentDetailModal.name}
+                  className="w-full h-full object-cover object-top"
+                  onError={e => { e.target.style.display='none'; }} />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="w-28 h-28 bg-white/20 rounded-full flex items-center justify-center text-white font-black text-5xl">
+                    {talentDetailModal.name[0]}
+                  </div>
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+              <button onClick={() => setTalentDetailModal(null)}
+                className="absolute top-4 right-4 w-9 h-9 bg-white/20 backdrop-blur rounded-full flex items-center justify-center text-white hover:bg-white/40 transition-all">
+                <FaTimes size={14} />
+              </button>
+              <span className="absolute bottom-4 right-4 bg-white/90 text-amber-600 text-[9px] font-black px-3 py-1.5 rounded-full">
+                {talentDetailModal.year}
+              </span>
+            </div>
+
+            {/* Info */}
+            <div className="p-8">
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight mb-1">{talentDetailModal.name}</h2>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">
+                {talentDetailModal.className}-sinf o'quvchisi
+              </p>
+
+              {/* Achievement */}
+              <div className="flex items-start gap-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 mb-4">
+                <div className="w-8 h-8 bg-amber-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md shadow-amber-200">
+                  <FaStar className="text-white" size={14} />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-1">Yutuq</p>
+                  <p className="text-sm font-black text-amber-800">{talentDetailModal.achievement}</p>
+                </div>
+              </div>
+
+              {talentDetailModal.description && (
+                <p className="text-sm text-slate-500 font-bold leading-relaxed mb-6">{talentDetailModal.description}</p>
+              )}
+
+              <div className="pt-4 border-t border-slate-100 text-center">
+                <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em]">OLMAZOR MAKTABI · IQTIDORLI TALABA</p>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* User Modal (Modernized) */}

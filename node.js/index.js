@@ -12,6 +12,7 @@ import { gradesRouter } from "./grades/gradeRoute.js";
 import { scheduleRouter } from "./schedule/scheduleRoute.js";
 import { applicationsRouter } from "./applications/applicationRoute.js";
 import libraryRouter from "./library/libraryRoute.js";
+import talentsRouter from "./talents/talentRoute.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,6 +33,7 @@ app.use('/grades', gradesRouter);
 app.use('/schedule', scheduleRouter);
 app.use('/applications', applicationsRouter);
 app.use('/library', libraryRouter);
+app.use('/talents', talentsRouter);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/', (req, res) => {

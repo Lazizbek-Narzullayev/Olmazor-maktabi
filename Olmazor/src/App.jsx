@@ -27,6 +27,7 @@ import Footer from './Components/Footer/Footer'
 import Sharoit from './Components/Sharoit/Sharoit'
 import MaktabQabuli from './Components/Qabul/MaktabQabuli'
 import QoshimchaDarslar from './Components/Qabul/QoshimchaDarslar'
+import IqtidorliTalabalar from './Components/IqtidorliTalabalar/IqtidorliTalabalar'
 
 // Panel sahifalari
 import Login from './pages/Login/Login'
@@ -81,6 +82,7 @@ const App = () => {
         <Route path='/shar' element={<Sharoit />} />
         <Route path='/mq' element={<MaktabQabuli />} />
         <Route path='/qd' element={<QoshimchaDarslar />} />
+        <Route path='/iqtidorlilar' element={<IqtidorliTalabalar />} />
 
         {/* ===== YANGI SAHIFALAR ===== */}
         <Route path='/login' element={<Login />} />
